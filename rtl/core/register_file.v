@@ -1,8 +1,7 @@
 `timescale 1ns / 1ps
 
 module register_file (
-    // NOTE: No clock. Writes are asynchronous (latch-based).
-    // The FPGA system clock is only used by the Program Counter.
+    input wire clk,         // FPGA_CLK — synchronous writes only
     input wire we,
     input wire [4:0] rs1,
     input wire [4:0] rs2,
@@ -12,7 +11,7 @@ module register_file (
     output wire [31:0] rd2,
 
     // History Buffer Interface
-    input wire restore_en,
+    input wire          restore_en,
     input wire [1023:0] restore_in,
     output wire [1023:0] state_out
 );
@@ -26,7 +25,7 @@ module register_file (
     end
 
     // -------------------------------------------------------
-    // Read ports — purely combinational, unchanged
+    // Read ports — purely combinational (single-cycle CPU)
     // x0 is hardwired to zero
     // -------------------------------------------------------
     assign rd1 = (rs1 == 5'd0) ? 32'd0 : registers[rs1];
@@ -43,25 +42,26 @@ module register_file (
     endgenerate
 
     // -------------------------------------------------------
-    // Async Write / Restore (Latch-based)
+    // Synchronous Write / Restore
     //
-    // Priority: restore_en > we
-    // When neither is asserted, all registers hold their value
-    // (latch retention). Quartus infers 32 enabled latches.
+    // WHY SYNCHRONOUS: The async latch version had a critical bug on FPGA
+    // hardware — the 'rd' signal (combinational decode of instruction bits)
+    // can transiently glitch to other register indices while 'we' is high
+    // (one full clock cycle). This caused spurious writes to registers like
+    // x3, corrupting the return address and causing wrong jumps (0x54 loop).
     //
-    // x0 is never written — it is always 0 on the read ports
-    // via the rd1/rd2 assigns above. For restore, we explicitly
-    // keep registers[0] = 0 to keep state_out[31:0] correct.
+    // With posedge clk writes, 'rd' and 'wd' are sampled exactly once at
+    // the clock edge, when both are fully settled. No glitches possible.
     // -------------------------------------------------------
     integer j;
-    always @(*) begin
+    always @(posedge clk) begin
         if (restore_en) begin
             for (j = 0; j < 32; j = j + 1) begin
-                if (j == 0) registers[0] = 32'b0;
-                else        registers[j] = restore_in[j*32 +: 32];
+                if (j == 0) registers[0] <= 32'b0;
+                else        registers[j] <= restore_in[j*32 +: 32];
             end
         end else if (we && rd != 5'd0) begin
-            registers[rd] = wd;
+            registers[rd] <= wd;
         end
     end
 

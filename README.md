@@ -1,57 +1,175 @@
-# FPGA RISC-V 32I Single Core
+# RV32I Single-Core FPGA Processor — DE1-SoC
 
-Welcome to the **RV32I Base Integer FPGA Processor** project! This repository contains a fully compliant, educational 32-bit RISC-V processor designed to be synthesized onto a **Terasic DE1-SoC FPGA board** using Quartus Prime.
-
-## 🚀 Quick Start Guide
-
-### 1. Writing Your Program
-This processor executes standard RISC-V machine code. You can compile any C or Assembly code targeting the `rv32i` architecture.
-1. Compile your program (e.g., using `riscv32-unknown-elf-gcc`).
-2. Extract the raw hexadecimal machine code.
-3. Open the **`program.hex`** file in the root directory.
-4. Paste your hex codes into `program.hex`. 
-   - *Rule: One 32-bit instruction per line, pure hex (e.g. `00100093`), no `0x` prefixes.*
-
-### 2. Flashing to the FPGA
-Because the `instruction_memory` automatically reads `program.hex`, you do not need to edit any Verilog files to change the program!
-1. Open **Quartus Prime Lite**.
-2. Open the project file: **`FPGA-RiscV32I.qpf`**.
-3. Double-click **Compile Design**.
-4. Open the **Programmer**, select your DE1-SoC board, and burn the resulting `.sof` file.
+A fully-functional, single-cycle **RV32I RISC-V** processor implemented in Verilog and deployed on the **Terasic DE1-SoC** (Intel Cyclone V). Supports manual instruction stepping, full temporal rollback (step-backward), and a real-time hardware monitor via switches and 7-segment displays.
 
 ---
 
-## 🎛️ Physical Hardware Interface
+## Features
 
-Once the design is running on the DE1-SoC board, you can use the physical switches and buttons to control the execution and debug your code in real-time.
-
-### Control Buttons (Keys)
-*   **`KEY0`**: **Reset.** Press to reset the processor and return the Program Counter to `0`.
-*   **`KEY1`**: **Step Forward.** Press to execute exactly **one** instruction.
-*   **`KEY2`**: **Step Backward.** Press to undo the last instruction (uses the internal history buffer to rollback state).
-
-### LED Indicators
-*   **`LEDR[0]`**: **Start.** Lights up when the processor is at the very first instruction (`PC == 0`).
-*   **`LEDR[1]`**: **Done.** Lights up when the processor executes the standard infinite-loop exit command (`JAL x0, 0` / `0000006F`).
-*   **`LEDR[9]`**: **Crash / Trap.** Lights up if the CPU encounters an illegal instruction or a misaligned memory access.
-
-### Hardware Monitor (HEX Displays & Switches)
-You can view the internal state of the processor on the six 7-segment displays (`HEX5` down to `HEX0`) by flipping the first three switches (`SW[2:0]`):
-
-| Switches `[2:0]` | Display Mode | Description |
-| :--- | :--- | :--- |
-| `0 0 0` | **Program Counter** | Shows the current memory address of the instruction being processed. |
-| `0 0 1` | **Current Instruction** | Shows the raw 32-bit Hex code being read from `program.hex`. |
-| `0 1 0` | **Result** | Shows the final computed result of the instruction (what is being saved to a register). |
-| `0 1 1` | **Register 1 (rs1)** | Shows the value read from the first source register. |
-| `1 0 0` | **Register 2 (rs2)** | Shows the value read from the second source register. |
-
-> [!NOTE]
-> **Dynamic Blanking:** If an instruction does not use `rs1`, `rs2`, or does not produce a register result (e.g., a `JUMP` instruction doesn't use `rs1`), the HEX displays will automatically go blank when you try to view that specific invalid field!
+- **Full RV32I ISA**: R, I, S, B, U, J instruction types
+- **Manual Execution Control**: Step forward / backward one instruction at a time using push-buttons
+- **True State Rollback**: Stepping backward restores PC, all 32 registers, and data memory to their exact pre-step values (64 levels deep)
+- **Real-Time Register Viewer**: Inspect any of the 32 CPU registers live using switches
+- **32-bit Value Inspector**: Toggle between lower 24 bits and upper 8 bits of any displayed value
+- **Exception Handling**: Detects illegal instructions and misaligned memory accesses; displays error code on HEX displays
+- **Hardware Debug Monitor**: Switch-selectable view of PC, instruction, ALU result, rs1, rs2, or any register
 
 ---
 
-## 🏗️ Architecture Features
-*   **Full RV32I Compliance:** Supports all 40 Base Integer instructions, including shifts, Set-Less-Than, Register Jumps, and Upper Immediates.
-*   **Reverse Execution:** Features an experimental history buffer that saves register and PC states, allowing for physical reverse-stepping of code.
-*   **Trap Handling:** Basic CSR support (`mepc`, `mcause`) catches illegal operations and redirects execution to a built-in trap handler.
+## Hardware Interface
+
+### Push-Buttons (KEY, Active Low)
+
+| Button | Function |
+|--------|----------|
+| `KEY[0]` | **Master Reset** — resets PC, registers, and memory |
+| `KEY[1]` | **Step Forward** — execute one instruction |
+| `KEY[2]` | **Step Backward** — undo one instruction (restores PC + registers + memory) |
+
+### Switches (SW)
+
+| Switch(es) | Function |
+|------------|----------|
+| `SW[2:0]` | **Display mode** (see table below) |
+| `SW[3]`   | **Upper byte modifier** — shows bits [31:24] on HEX1:HEX0, blanks HEX5:HEX2 |
+| `SW[4]`   | Unused |
+| `SW[9:5]` | **Register select** — selects x0–x31 when `SW[2:0] = 101` |
+
+#### SW[2:0] Display Modes
+
+| SW[2:0] | Display | Shows |
+|---------|---------|-------|
+| `000` | PC | Program Counter (byte address) |
+| `001` | Instruction | 32-bit instruction word at current PC |
+| `010` | Result | ALU / write-back result |
+| `011` | rs1 | Source register 1 value |
+| `100` | rs2 | Source register 2 value |
+| `101` | Register | Value of the register selected by `SW[9:5]` |
+
+> **Note:** In all modes, HEX5:HEX0 show bits **[23:0]** of the value by default (6 hex digits). Set `SW[3]=1` to see bits **[31:24]** on HEX1:HEX0 instead, with HEX5:HEX2 blanked.
+
+#### Upper Byte Mode (SW[3])
+
+| SW[3] | HEX5 | HEX4 | HEX3 | HEX2 | HEX1 | HEX0 |
+|-------|------|------|------|------|------|------|
+| `0` | bits[23:20] | bits[19:16] | bits[15:12] | bits[11:8] | bits[7:4] | bits[3:0] |
+| `1` | OFF  | OFF  | OFF  | OFF  | bits[31:28] | bits[27:24] |
+
+### LEDs (LEDR)
+
+| LED | Condition |
+|-----|-----------|
+| `LEDR[0]` | ON when PC = 0 (start of program) |
+| `LEDR[1]` | ON when CPU is in the infinite-loop exit state |
+| `LEDR[9]` | ON when a trap/exception is active |
+| `LEDR[8:2]` | Unused |
+
+### Error Display (Trap Mode)
+
+When a trap is active, HEX displays override all switches and show:
+
+```
+HEX5  HEX4  HEX3  HEX2  HEX1  HEX0
+  E     0     0     0     0    cause
+```
+
+| `cause` | Meaning |
+|---------|---------|
+| `2` | Illegal Instruction |
+| `4` | Misaligned Load |
+| `6` | Misaligned Store |
+
+> ECALL, EBREAK, and FENCE are treated as NOPs on this bare-metal system (no OS).
+
+---
+
+## Project Structure
+
+```
+FPGA-RiscV32I/
+├── rtl/
+│   ├── SingleCore_FPGA_RV32I.v   # Top-level: pin mapping, display, interconnect
+│   ├── core/
+│   │   ├── rv32i_core.v          # CPU datapath, FSM, CSRs, history buffer control
+│   │   ├── control_unit.v        # Instruction decoder, control signal generator
+│   │   ├── register_file.v       # 32×32-bit async latch register file
+│   │   └── pc.v                  # Program Counter (only clocked element in datapath)
+│   ├── datapath/
+│   │   ├── alu.v                 # 32-bit ALU
+│   │   ├── alu_control.v         # ALU operation selector
+│   │   ├── branch_unit.v         # Branch condition evaluator
+│   │   └── imm_gen.v             # Immediate value generator
+│   ├── memory/
+│   │   ├── instruction_memory.v  # 64×32-bit ROM ($readmemh from program.hex)
+│   │   ├── data_memory.v         # 32×32-bit async latch RAM (4 byte-lane banks)
+│   │   ├── history_buffer.v      # 64-entry × 2080-bit BRAM stack for rollback
+│   │   └── address_bridge.v      # Memory-mapped I/O router
+│   └── io/
+│       └── hex_decoder.v         # 4-bit → 7-segment decoder (active low)
+├── tb/
+│   ├── integration_test_tb.v     # Full system integration testbench
+│   └── assembler.py              # Hex file assembler helper
+├── program.hex                   # RV32I machine code (loaded into ROM at synthesis)
+└── README.md
+```
+
+---
+
+## Memory Map
+
+| Address Range | Region | Notes |
+|---------------|--------|-------|
+| `0x0000–0x00FC` | Instruction ROM | 64 words, loaded from `program.hex` |
+| `0x0000–0x007C` | Data RAM | 32 words (128 bytes), four 8-bit byte banks |
+| `0x2000–0x3FFF` | I/O Space | Reserved for future peripherals |
+
+---
+
+## Architecture Notes
+
+### Single-Cycle, Fully Async Datapath
+The only clocked element in the CPU datapath is the **Program Counter**. The register file and data memory use asynchronous latches, enabling the manual-step workflow without clock gating.
+
+### Memory Rollback
+The history buffer saves a 2080-bit snapshot on every forward step:
+```
+Snapshot = [ PC (32) | Registers x0–x31 (1024) | Data Memory (1024) ]
+```
+Stepping backward pops the snapshot and simultaneously restores all three components. Memory writes (SW/SH/SB) are fully undoable.
+
+### Four-Bank Byte-Lane Memory
+Data memory uses four independent 8-bit arrays (one per byte lane) rather than a single 32-bit array. This matches how physical SRAM with byte-enables works and simplifies sub-word access logic for `LB`, `LH`, `LW`.
+
+---
+
+## Synthesis (Quartus Prime)
+
+1. Open Quartus Prime and create a project targeting **Cyclone V 5CSEMA5F31C6**
+2. Add all `.v` files under `rtl/` and its subdirectories
+3. Set `SingleCore_FPGA_RV32I` as the top-level entity
+4. Assign pins according to the DE1-SoC pin assignment file (`c5_pin_model_dump.txt`)
+5. Copy `program.hex` to the Quartus project directory (same level as the `.qpf` file)
+6. Compile and program the FPGA via USB-Blaster
+
+> **Expected synthesis result**: ~1,200–1,600 ALMs, no M10K BRAM errors. The history buffer infers M10K blocks; data memory and register file use MLABs/ALUTs.
+
+---
+
+## Running Simulation
+
+```powershell
+# Compile
+iverilog -s integration_test_tb -o tb/integration_sim `
+  tb/integration_test_tb.v rtl/SingleCore_FPGA_RV32I.v `
+  rtl/core/rv32i_core.v rtl/core/control_unit.v rtl/core/pc.v `
+  rtl/core/register_file.v rtl/datapath/alu.v rtl/datapath/alu_control.v `
+  rtl/datapath/branch_unit.v rtl/datapath/imm_gen.v `
+  rtl/memory/instruction_memory.v rtl/memory/data_memory.v `
+  rtl/memory/address_bridge.v rtl/memory/history_buffer.v `
+  rtl/io/hex_decoder.v
+
+# Run
+vvp tb/integration_sim
+```
+
+Expected output: 5 PASS results with no errors.

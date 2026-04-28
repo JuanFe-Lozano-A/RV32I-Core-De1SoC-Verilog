@@ -1,58 +1,72 @@
 `timescale 1ns / 1ps
 
 module data_memory (
-    // NOTE: No clock. Both reads and writes are fully asynchronous (latch-based).
+    input wire clk,         // FPGA_CLK — synchronous writes only
     input wire we,
     input wire re,
     input wire [31:0] addr,
     input wire [31:0] wdata,
     input wire [3:0]  be,
-    output reg [31:0] rdata
+    output reg [31:0] rdata,
+
+    // History Buffer Restore Interface
+    input wire          restore_en,
+    input wire [1023:0] restore_data,
+    output wire [1023:0] state_out
 );
 
-    // 128 bytes of data RAM, organized as four independent 8-bit byte-lane banks.
-    // This mirrors how physical SRAM with byte-enables works:
-    //
-    //   bank3  bank2  bank1  bank0
-    //  [31:24][23:16][15:8] [7:0]
-    //
-    // LB/SB: writes or reads exactly ONE bank, selected by addr[1:0]
-    // LH/SH: writes or reads TWO adjacent banks, selected by addr[1]
-    // LW/SW: accesses ALL FOUR banks simultaneously
-    //
-    // The byte-enable signals (be[3:0]) from rv32i_core.v already encode
-    // which banks to activate — no additional decoding is needed here.
-    reg [7:0] bank0 [0:31]; // bits  7:0
-    reg [7:0] bank1 [0:31]; // bits 15:8
-    reg [7:0] bank2 [0:31]; // bits 23:16
-    reg [7:0] bank3 [0:31]; // bits 31:24
-    // Note: No 'initial' block. Cyclone V logic elements default to 0 at
-    // FPGA configuration, and 'initial' blocks on latch arrays cause
-    // Quartus error 276000 (Cannot synthesize initialized RAM logic).
+    // 128 bytes organized as four independent 8-bit byte-lane banks.
+    reg [7:0] bank0 [0:31];
+    reg [7:0] bank1 [0:31];
+    reg [7:0] bank2 [0:31];
+    reg [7:0] bank3 [0:31];
 
-    // Word address: strip byte offset bits [1:0] and upper bits.
-    // 32 words requires a 5-bit index: addr[6:2]
+    integer i;
+    initial begin
+        for (i = 0; i < 32; i = i + 1) begin
+            bank0[i] = 8'h00;
+            bank1[i] = 8'h00;
+            bank2[i] = 8'h00;
+            bank3[i] = 8'h00;
+        end
+    end
+
+    // Word address: byte address / 4
     wire [4:0] word_addr = addr[6:2];
 
     // -------------------------------------------------------
-    // Async Write (Latch-based)
-    // Each bank is independently gated by its byte-enable bit.
-    // Quartus infers these as enabled latches — one per byte lane.
+    // State serialization: word i = {bank3[i],bank2[i],bank1[i],bank0[i]}
     // -------------------------------------------------------
-    always @(*) begin
-        if (we) begin
-            if (be[0]) bank0[word_addr] = wdata[7:0];
-            if (be[1]) bank1[word_addr] = wdata[15:8];
-            if (be[2]) bank2[word_addr] = wdata[23:16];
-            if (be[3]) bank3[word_addr] = wdata[31:24];
+    genvar m;
+    generate
+        for (m = 0; m < 32; m = m + 1) begin : gen_mem_state
+            assign state_out[m*32 +: 32] = {bank3[m], bank2[m], bank1[m], bank0[m]};
+        end
+    endgenerate
+
+    // -------------------------------------------------------
+    // Synchronous Write / Restore (posedge clk)
+    // Reads remain asynchronous (combinational) for single-cycle operation.
+    // -------------------------------------------------------
+    integer ri;
+    always @(posedge clk) begin
+        if (restore_en) begin
+            for (ri = 0; ri < 32; ri = ri + 1) begin
+                bank0[ri] <= restore_data[ri*32 +: 8];
+                bank1[ri] <= restore_data[ri*32+8  +: 8];
+                bank2[ri] <= restore_data[ri*32+16 +: 8];
+                bank3[ri] <= restore_data[ri*32+24 +: 8];
+            end
+        end else if (we) begin
+            if (be[0]) bank0[word_addr] <= wdata[7:0];
+            if (be[1]) bank1[word_addr] <= wdata[15:8];
+            if (be[2]) bank2[word_addr] <= wdata[23:16];
+            if (be[3]) bank3[word_addr] <= wdata[31:24];
         end
     end
 
     // -------------------------------------------------------
-    // Async Read (Combinational)
-    // Always assembles the full 32-bit word from all four banks.
-    // The CPU extracts the relevant bytes (LB/LH/LBU/LHU)
-    // via aligned_rdata logic in rv32i_core.v.
+    // Async Read (Combinational — required for single-cycle CPU)
     // -------------------------------------------------------
     always @(*) begin
         if (re)

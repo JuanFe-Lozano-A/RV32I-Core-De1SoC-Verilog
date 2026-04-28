@@ -19,14 +19,20 @@ module rv32i_core (
     output reg [3:0] dmem_be, // Byte Enable
     
     // Hardware Monitor Interface
-    output wire [31:0] monitor_rd1,
-    output wire [31:0] monitor_rd2,
-    output wire [31:0] monitor_mcause,
-    output wire [31:0] monitor_result,
-    output wire monitor_rs1_valid,
-    output wire monitor_rs2_valid,
-    output wire monitor_result_valid,
-    output wire monitor_trap_active
+    output wire [31:0]  monitor_rd1,
+    output wire [31:0]  monitor_rd2,
+    output wire [31:0]  monitor_mcause,
+    output wire [31:0]  monitor_result,
+    output wire         monitor_rs1_valid,
+    output wire         monitor_rs2_valid,
+    output wire         monitor_result_valid,
+    output wire         monitor_trap_active,
+    output wire [1023:0] monitor_regfile_state,
+
+    // Data Memory State Interface (for history buffer snapshot + restore)
+    input  wire [1023:0] dmem_state_in,
+    output wire          dmem_restore_en,
+    output wire [1023:0] dmem_restore_data
 );
 
     // ==========================================
@@ -60,12 +66,14 @@ module rv32i_core (
 
     wire [1023:0] current_regfile_state;
     wire [1023:0] restored_regfile_state;
-    wire [31:0] restored_pc;
-    wire hist_empty;
-    wire [1055:0] hist_state_out;
+    wire [31:0]   restored_pc;
+    wire          hist_empty;
+    wire [2079:0] hist_state_out;
     
-    assign restored_pc = hist_state_out[1055:1024];
-    assign restored_regfile_state = hist_state_out[1023:0];
+    assign restored_pc            = hist_state_out[2079:2048];
+    assign restored_regfile_state  = hist_state_out[2047:1024];
+    // Memory restore slice — wired directly to data_memory via top-level
+    assign dmem_restore_data       = hist_state_out[1023:0];
 
     reg hist_push, hist_pop;
     reg core_step, core_restore;
@@ -101,7 +109,7 @@ module rv32i_core (
         .reset_n(reset_n),
         .push(hist_push),
         .pop(hist_pop),
-        .state_in({pc_out, current_regfile_state}),
+        .state_in({pc_out, current_regfile_state, dmem_state_in}),
         .state_out(hist_state_out),
         .empty(hist_empty)
     );
@@ -226,6 +234,7 @@ module rv32i_core (
 
     // Register File
     register_file u_regfile (
+        .clk(clk),
         .we(effective_RegWrite & core_step), 
         .rs1(imem_inst[19:15]),
         .rs2(imem_inst[24:20]),
@@ -239,12 +248,14 @@ module rv32i_core (
     );
 
     // Expose for hardware monitoring
-    assign monitor_rd1          = rd1;
-    assign monitor_rd2          = rd2;
-    assign monitor_mcause       = mcause;
-    assign monitor_result       = reg_write_data;
-    assign monitor_result_valid = effective_RegWrite;
-    assign monitor_trap_active  = trap_active;
+    assign monitor_rd1           = rd1;
+    assign monitor_rd2           = rd2;
+    assign monitor_mcause        = mcause;
+    assign monitor_result        = reg_write_data;
+    assign monitor_result_valid  = effective_RegWrite;
+    assign monitor_trap_active   = trap_active;
+    assign monitor_regfile_state = current_regfile_state;
+    assign dmem_restore_en       = core_restore;
 
     // Immediate Generator
     imm_gen u_imm_gen (.inst(imem_inst[31:7]), .ImmSel(ImmSel), .imm(imm));
