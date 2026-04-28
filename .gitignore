@@ -1,0 +1,19 @@
+# Quartus Prime auto-generated files and directories
+db/
+incremental_db/
+output_files/
+sim/
+simulation/
+*.qws
+*.bak
+c5_pin_model_dump.txt
+greybox_tmp/
+
+# Icarus Verilog / ModelSim Simulation Artifacts
+*.vcd
+*_sim
+*.out
+
+# OS specific files
+.DS_Store
+Thumbs.db
