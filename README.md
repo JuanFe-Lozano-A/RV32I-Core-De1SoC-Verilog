@@ -202,13 +202,6 @@ Expected output: 5 PASS results with no errors.
 
 The `dev` branch includes a complete **640x480 @ 60Hz VGA Monitor** that visualizes the internal state of the RV32I core without interfering with its logic. 
 
-**How to use it:**
-1. Open Quartus Prime.
-2. Go to **Project > Revisions...**
-3. Switch from `FPGA-RiscV32I` to `FPGA-RiscV32I_VGA` and click **Set Current**.
-4. Recompile and upload to the DE1-SoC.
-5. Connect a VGA monitor and flip **`SW[4]` UP** to enable the Pip-Boy green text display!
-
 The screen shows:
 - The current PC and Instruction
 - A full grid of all 32 registers (`x0`-`x31`)
