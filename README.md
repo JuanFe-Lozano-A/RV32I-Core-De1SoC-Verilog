@@ -88,12 +88,13 @@ HEX5  HEX4  HEX3  HEX2  HEX1  HEX0
 ```
 FPGA-RiscV32I/
 ├── rtl/
-│   ├── SingleCore_FPGA_RV32I.v   # Top-level: pin mapping, display, interconnect
+│   ├── SingleCore_FPGA_RV32I.v       # Base Top-level: HEX & LEDs only
+│   ├── SingleCore_FPGA_RV32I_VGA.v   # VGA Top-level: includes VGA subsystem
 │   ├── core/
 │   │   ├── rv32i_core.v          # CPU datapath, FSM, CSRs, history buffer control
 │   │   ├── control_unit.v        # Instruction decoder, control signal generator
-│   │   ├── register_file.v       # 32×32-bit async latch register file
-│   │   └── pc.v                  # Program Counter (only clocked element in datapath)
+│   │   ├── register_file.v       # 32×32-bit sync register file
+│   │   └── pc.v                  # Program Counter
 │   ├── datapath/
 │   │   ├── alu.v                 # 32-bit ALU
 │   │   ├── alu_control.v         # ALU operation selector
@@ -101,15 +102,25 @@ FPGA-RiscV32I/
 │   │   └── imm_gen.v             # Immediate value generator
 │   ├── memory/
 │   │   ├── instruction_memory.v  # 64×32-bit ROM ($readmemh from program.hex)
-│   │   ├── data_memory.v         # 32×32-bit async latch RAM (4 byte-lane banks)
-│   │   ├── history_buffer.v      # 64-entry × 2080-bit BRAM stack for rollback
+│   │   ├── data_memory.v         # 32×32-bit sync RAM (4 byte-lane banks)
+│   │   ├── history_buffer.v      # 64-entry × 2080-bit dual BRAM stack for rollback
 │   │   └── address_bridge.v      # Memory-mapped I/O router
-│   └── io/
-│       └── hex_decoder.v         # 4-bit → 7-segment decoder (active low)
+│   ├── io/
+│   │   └── hex_decoder.v         # 4-bit → 7-segment decoder (active low)
+│   └── vga/
+│       ├── vga_controller.v      # Standard 640x480 @ 60Hz timing generator
+│       ├── font_rom.v            # 8x16 ASCII Font ROM
+│       └── text_engine.v         # Renders CPU state to 80x30 character grid
 ├── tb/
 │   ├── integration_test_tb.v     # Full system integration testbench
-│   └── assembler.py              # Hex file assembler helper
-├── program.hex                   # RV32I machine code (loaded into ROM at synthesis)
+│   ├── verify_tests_tb.v         # Verification bench for HEX test programs
+│   ├── verify_mem_tb.v           # Verification bench for Data Memory
+│   └── verify_vga_tb.v           # Verification bench for VGA timing
+├── tests/
+│   └── code_tests/               # Assembly hex programs and matching reference CSVs
+├── FPGA-RiscV32I.qsf             # Base Quartus Revision (No VGA)
+├── FPGA-RiscV32I_VGA.qsf         # VGA Quartus Revision (Includes VGA pins)
+├── program.hex                   # Active RV32I machine code (loaded at synthesis)
 └── README.md
 ```
 
@@ -142,16 +153,27 @@ Data memory uses four independent 8-bit arrays (one per byte lane) rather than a
 
 ---
 
-## Synthesis (Quartus Prime)
+## Synthesis (Quartus Prime) & Compilation
 
-1. Open Quartus Prime and create a project targeting **Cyclone V 5CSEMA5F31C6**
-2. Add all `.v` files under `rtl/` and its subdirectories
-3. Set `SingleCore_FPGA_RV32I` as the top-level entity
-4. Assign pins according to the DE1-SoC pin assignment file (`c5_pin_model_dump.txt`)
-5. Copy `program.hex` to the Quartus project directory (same level as the `.qpf` file)
-6. Compile and program the FPGA via USB-Blaster
+This project uses **Quartus Revisions** to allow you to easily opt in or out of the VGA screen feature without messing up your pin assignments.
 
-> **Expected synthesis result**: ~1,200–1,600 ALMs, no M10K BRAM errors. The history buffer infers M10K blocks; data memory and register file use MLABs/ALUTs.
+### To Run WITHOUT VGA (Base Mode)
+1. Open the project in Quartus Prime (`FPGA-RiscV32I.qpf`).
+2. Go to **Project > Revisions...**
+3. Select `FPGA-RiscV32I` and click **Set Current**.
+4. Double-click **Compile Design**.
+5. Program the DE1-SoC. The FPGA will only use the HEX displays and LEDs.
+
+### To Run WITH VGA (Pip-Boy Monitor Mode)
+1. Open the project in Quartus Prime (`FPGA-RiscV32I.qpf`).
+2. Go to **Project > Revisions...**
+3. Select `FPGA-RiscV32I_VGA` and click **Set Current**.
+4. Double-click **Compile Design**.
+5. Program the DE1-SoC.
+6. Connect a VGA monitor to the board. 
+7. Flip **`SW[4]` to the UP position** to turn on the screen!
+
+> **Note:** To change the program the CPU runs, copy one of the `.hex` files from `tests/code_tests/` into the root directory, rename it to `program.hex`, and recompile your chosen revision.
 
 ---
 
