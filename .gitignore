@@ -17,3 +17,12 @@ greybox_tmp/
 # OS specific files
 .DS_Store
 Thumbs.db
+
+# Python Caches
+__pycache__/
+*.py[cod]
+
+# Generic Verilog Compiled Binaries
+*.vvp
+*_sim
+*.vcd
