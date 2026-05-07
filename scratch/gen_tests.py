@@ -7,6 +7,10 @@ class RV32ISimulator:
         self.mem = [0] * 128  # 128 bytes
         self.history = []     # For rollback tracking
         
+    def sign_extend(self, val, bits):
+        sign_bit = 1 << (bits - 1)
+        return (val & (sign_bit - 1)) - (val & sign_bit)
+
     def to_u32(self, val):
         return val & 0xFFFFFFFF
         
@@ -50,7 +54,7 @@ class RV32ISimulator:
             elif funct3 == 7: result = self.to_u32(rs1_val & rs2_val) # AND
             
         elif opcode == 0x13: # I-Type ALU
-            imm = self.to_i32((inst >> 20) & 0xFFF)
+            imm = self.sign_extend((inst >> 20) & 0xFFF, 12)
             if funct3 == 0: result = self.to_u32(rs1_val + imm) # ADDI
             elif funct3 == 2: result = 1 if self.to_i32(rs1_val) < imm else 0 # SLTI
             elif funct3 == 3: result = 1 if rs1_val < self.to_u32(imm) else 0 # SLTIU
@@ -72,17 +76,17 @@ class RV32ISimulator:
             result = self.to_u32(self.pc + imm)
             
         elif opcode == 0x6F: # JAL
-            imm = self.to_i32(((inst >> 31) << 20) | (((inst >> 12) & 0xFF) << 12) | (((inst >> 20) & 0x1) << 11) | (((inst >> 21) & 0x3FF) << 1))
+            imm = self.sign_extend(((inst >> 31) << 20) | (((inst >> 12) & 0xFF) << 12) | (((inst >> 20) & 0x1) << 11) | (((inst >> 21) & 0x3FF) << 1), 21)
             result = self.pc + 4
             next_pc = self.to_u32(self.pc + imm)
             
         elif opcode == 0x67: # JALR
-            imm = self.to_i32((inst >> 20) & 0xFFF)
+            imm = self.sign_extend((inst >> 20) & 0xFFF, 12)
             result = self.pc + 4
             next_pc = self.to_u32((rs1_val + imm) & ~1)
             
         elif opcode == 0x63: # Branch
-            imm = self.to_i32(((inst >> 31) << 12) | (((inst >> 7) & 0x1) << 11) | (((inst >> 25) & 0x3F) << 5) | (((inst >> 8) & 0xF) << 1))
+            imm = self.sign_extend(((inst >> 31) << 12) | (((inst >> 7) & 0x1) << 11) | (((inst >> 25) & 0x3F) << 5) | (((inst >> 8) & 0xF) << 1), 13)
             take = False
             if funct3 == 0: take = (rs1_val == rs2_val) # BEQ
             elif funct3 == 1: take = (rs1_val != rs2_val) # BNE
@@ -93,7 +97,7 @@ class RV32ISimulator:
             if take: next_pc = self.to_u32(self.pc + imm)
             
         elif opcode == 0x23: # Store
-            imm = self.to_i32(((inst >> 25) << 5) | ((inst >> 7) & 0x1F))
+            imm = self.sign_extend(((inst >> 25) << 5) | ((inst >> 7) & 0x1F), 12)
             addr = self.to_u32(rs1_val + imm)
             if funct3 == 0: # SB
                 if addr < 128: self.mem[addr] = rs2_val & 0xFF
@@ -109,7 +113,7 @@ class RV32ISimulator:
                     self.mem[addr+3] = (rs2_val >> 24) & 0xFF
                     
         elif opcode == 0x03: # Load
-            imm = self.to_i32((inst >> 20) & 0xFFF)
+            imm = self.sign_extend((inst >> 20) & 0xFFF, 12)
             addr = self.to_u32(rs1_val + imm)
             if funct3 == 0: # LB
                 if addr < 128: result = self.to_u32(self.to_i32((self.mem[addr] ^ 0x80) - 0x80))
