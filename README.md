@@ -32,7 +32,7 @@ A fully-functional, single-cycle **RV32I RISC-V** processor implemented in Veril
 |------------|----------|
 | `SW[2:0]` | **Display mode** (see table below) |
 | `SW[3]`   | **Upper byte modifier** — shows bits [31:24] on HEX1:HEX0, blanks HEX5:HEX2 |
-| `SW[4]`   | Unused |
+| `SW[4]`   | **VGA Pip-Boy Screen Enable** — Up = ON (retro green), Down = Blank |
 | `SW[9:5]` | **Register select** — selects x0–x31 when `SW[2:0] = 101` |
 
 #### SW[2:0] Display Modes
@@ -173,3 +173,22 @@ vvp tb/integration_sim
 ```
 
 Expected output: 5 PASS results with no errors.
+
+---
+
+## The VGA Pip-Boy Monitor
+
+The `dev` branch includes a complete **640x480 @ 60Hz VGA Monitor** that visualizes the internal state of the RV32I core without interfering with its logic. 
+
+**How to use it:**
+1. Open Quartus Prime.
+2. Go to **Project > Revisions...**
+3. Switch from `FPGA-RiscV32I` to `FPGA-RiscV32I_VGA` and click **Set Current**.
+4. Recompile and upload to the DE1-SoC.
+5. Connect a VGA monitor and flip **`SW[4]` UP** to enable the Pip-Boy green text display!
+
+The screen shows:
+- The current PC and Instruction
+- A full grid of all 32 registers (`x0`-`x31`)
+- The ALU Result
+- Status flags (`FIRST INST`, `HALTED`, `TRAP E0000x`)
