@@ -20,6 +20,13 @@ To drastically expedite the Synthesis and Fitter stages while testing:
 > 
 > **However**, the `primary_tests` are much longer (e.g., `reg_viewer_test` is 32 instructions). If you intend to run the primary tests and you want the ability to step backward all the way to the beginning of the program, you **must** use `DEPTH = 64`. If you use `DEPTH = 16`, the primary test will still execute perfectly forward, but you will only be able to rewind the last 16 steps.
 
+### ⚠️ A Note on Data Memory Size
+You might be tempted to shrink the `data_memory` from 128 bytes down to 16 bytes to further speed up compilation. **Do not do this for quick testing.**
+
+Unlike the `DEPTH` parameter, the Data Memory size is **not a single variable change**. Because the History Buffer must take a 1-cycle snapshot of the entire processor, the Data Memory is serialized into a massive 1024-bit wide bus. Changing the memory capacity requires manually recalculating and modifying the bit-widths of `state_in` and `state_out` across `data_memory.v`, `history_buffer.v`, and the top-level modules. 
+
+If you ever need to **expand** the memory for larger projects in the future, you must update the concatenation widths in all three of those files, otherwise the hardware rollback mechanism will shatter.
+
 ---
 
 ## 📁 Primary Tests (`tests/primary_tests/`)
