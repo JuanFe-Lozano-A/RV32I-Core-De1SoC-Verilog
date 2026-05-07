@@ -62,3 +62,22 @@ These 14 micro-tests are mathematically generated to stress-test specific border
 These tests specifically verify the hardware history buffer. The CSV files explicitly document the expected register and memory states during the reverse-execution phase.
 - **`edge_rollback_regs`**: Steps forward to modify `x1`, `x2`, and `x3`, then steps backward. The CSV tracks the registers emptying back to zero.
 - **`edge_rollback_mem`**: Stores `0xAA` to memory, overwrites it with `0xBB`, and rolls back. The test proves the old data is perfectly reinstated.
+
+---
+
+## 💻 Python VGA CSV Viewer
+
+To make reviewing the CSV execution traces incredibly simple, this repository includes a native Python application (`tests/vga_viewer.py`) that visually mimics the physical FPGA VGA monitor!
+
+**How to use it:**
+1. Open your terminal or command prompt.
+2. Navigate to the `tests/` directory.
+3. Run the script: `python vga_viewer.py`
+4. A file dialog will pop up. Select any of the `.csv` files from `primary_tests` or `edge_cases`.
+5. The Pip-Boy UI will open.
+
+**Controls:**
+- ➡️ **Right Arrow Key**: Step Forward to the next instruction in the CSV trace.
+- ⬅️ **Left Arrow Key**: Step Backward to the previous instruction.
+
+The viewer will automatically render the 80x30 retro-green character grid, showing the Program Counter, the current instruction (both Hex and Assembly), the ALU Result, and the exact state of all 32 hardware registers at that specific moment in time!
