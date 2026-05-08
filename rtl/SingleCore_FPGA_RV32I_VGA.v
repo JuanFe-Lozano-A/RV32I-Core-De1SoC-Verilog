@@ -30,7 +30,7 @@ module SingleCore_FPGA_RV32I_VGA (
     always @(posedge FPGA_CLK) begin
         clk_25mhz <= ~clk_25mhz;
     end
-    assign VGA_CLK = clk_25mhz;
+    assign VGA_CLK = ~clk_25mhz;
 
     // ==========================================
     // 2. Clock, Reset & Step Logic
