@@ -851,8 +851,8 @@ module text_engine (
     end
 
     // Pixel color extraction
-    // Font data is 8 bits wide, MSB is left-most pixel.
-    wire pixel_active = font_data[7 - font_col_d];
+    // Font data is 8 bits wide, LSB is left-most pixel for the new chunky font.
+    wire pixel_active = font_data[font_col_d];
 
     // Pip-Boy Colors
     always @(*) begin
