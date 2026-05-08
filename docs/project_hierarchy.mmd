@@ -1,0 +1,39 @@
+graph TD
+    %% Define Styles
+    classDef top fill:#f44336,stroke:#333,stroke-width:2px,color:#fff;
+    classDef wrapper fill:#ff9800,stroke:#333,stroke-width:2px;
+    classDef component fill:#e0e0e0,stroke:#333,stroke-width:1px;
+    classDef data fill:#9e9e9e,stroke:#333,stroke-width:1px,stroke-dasharray: 5 5;
+
+    TOP["SingleCore_FPGA_RV32I_VGA.v"]:::top
+
+    %% Wrappers
+    CORE_WRAP["rv32i_core.v"]:::wrapper
+    VGA_WRAP["vga_controller.v"]:::wrapper
+    TEXT_WRAP["text_engine.v"]:::wrapper
+
+    %% Top Level Connections
+    TOP --> CORE_WRAP
+    TOP --> VGA_WRAP
+    TOP --> TEXT_WRAP
+    TOP --> IMEM["instruction_memory.v"]:::component
+    TOP --> DMEM["data_memory.v"]:::component
+    TOP --> BRIDGE["address_bridge.v"]:::component
+    TOP --> HIST["history_buffer.v"]:::component
+    TOP --> HEX["hex_decoder.v (x6)"]:::component
+
+    %% Core Dependencies
+    CORE_WRAP --> PC["pc.v"]:::component
+    CORE_WRAP --> RF["register_file.v"]:::component
+    CORE_WRAP --> CU["control_unit.v"]:::component
+    CORE_WRAP --> ALU["alu.v"]:::component
+    CORE_WRAP --> ALU_CTRL["alu_control.v"]:::component
+    CORE_WRAP --> BU["branch_unit.v"]:::component
+    CORE_WRAP --> IMM["imm_gen.v"]:::component
+
+    %% VGA Dependencies
+    TEXT_WRAP --> FONT["font_rom.v"]:::component
+
+    %% Data Files
+    PROG_HEX[("program.hex")]:::data
+    IMEM -. "$readmemh" .-> PROG_HEX
