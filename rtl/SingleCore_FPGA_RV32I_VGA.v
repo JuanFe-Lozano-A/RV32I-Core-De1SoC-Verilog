@@ -84,10 +84,40 @@ module SingleCore_FPGA_RV32I_VGA (
     // 4. Submodule Instantiation
     // ==========================================
 
+    `ifdef USE_VON_NEUMANN
+    unified_memory u_mem (
+        .clk(FPGA_CLK),
+        .addr_a(imem_addr),
+        .inst_out(imem_inst),
+        .addr_b(dmem_addr),
+        .wdata_b(dmem_wdata),
+        .be_b(dmem_be),
+        .we_b(dmem_we & ram_sel),
+        .re_b(dmem_re & ram_sel),
+        .data_out_b(ram_rdata),
+        .restore_en(dmem_restore_en),
+        .restore_data(dmem_restore_data),
+        .state_out(dmem_state_out)
+    );
+    `else
     instruction_memory u_imem (
         .addr(imem_addr),
         .inst(imem_inst)
     );
+
+    data_memory u_dmem (
+        .clk(FPGA_CLK),
+        .we(dmem_we & ram_sel),
+        .re(dmem_re & ram_sel),
+        .addr(dmem_addr),
+        .wdata(dmem_wdata),
+        .be(dmem_be),
+        .rdata(ram_rdata),
+        .restore_en(dmem_restore_en),
+        .restore_data(dmem_restore_data),
+        .state_out(dmem_state_out)
+    );
+    `endif
 
     rv32i_core u_core (
         .clk(FPGA_CLK),
@@ -125,19 +155,6 @@ module SingleCore_FPGA_RV32I_VGA (
         .io_sel(io_sel),
         .io_rdata(io_rdata),
         .rdata_out(dmem_rdata)
-    );
-
-    data_memory u_dmem (
-        .clk(FPGA_CLK),
-        .we(dmem_we & ram_sel),
-        .re(dmem_re & ram_sel),
-        .addr(dmem_addr),
-        .wdata(dmem_wdata),
-        .be(dmem_be),
-        .rdata(ram_rdata),
-        .restore_en(dmem_restore_en),
-        .restore_data(dmem_restore_data),
-        .state_out(dmem_state_out)
     );
 
     // ==========================================

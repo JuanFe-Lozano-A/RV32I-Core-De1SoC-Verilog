@@ -4,6 +4,7 @@ graph TD
     classDef datapath fill:#81d4fa,stroke:#333,stroke-width:2px;
     classDef memory fill:#ffb74d,stroke:#333,stroke-width:2px;
     classDef io fill:#ce93d8,stroke:#333,stroke-width:2px;
+    classDef mode fill:#f0f4c3,stroke:#333,stroke-dasharray: 5 5;
 
     subgraph RV32I_Core ["rv32i_core.v"]
         PC["pc.v"]:::core
@@ -17,8 +18,15 @@ graph TD
     end
 
     subgraph Memory_System ["rtl/memory/"]
-        IMEM["instruction_memory.v"]:::memory
-        DMEM["data_memory.v"]:::memory
+        subgraph Harvard_Mode ["Harvard Architecture (Default)"]
+            IMEM["instruction_memory.v"]:::memory
+            DMEM["data_memory.v"]:::memory
+        end
+        
+        subgraph VonNeumann_Mode ["Von Neumann Architecture (Macro: USE_VON_NEUMANN)"]
+            UMEM["unified_memory.v"]:::memory
+        end
+        
         BRIDGE["address_bridge.v"]:::memory
         HIST["history_buffer.v"]:::memory
     end
@@ -26,13 +34,18 @@ graph TD
     subgraph External_IO ["FPGA Peripherals"]
         HEX["hex_decoder.v"]:::io
         LEDS["LEDR"]:::io
+        VGA["VGA Controller & Text Engine"]:::io
     end
 
     %% Instruction Fetch
-    PC -- "Instruction Address" --> IMEM
-    IMEM -- "32-bit Instruction" --> CU
-    IMEM -- "32-bit Instruction" --> IMM
+    PC -- "Instr Address" --> IMEM
+    PC -- "Instr Address (Port A)" --> UMEM
+    IMEM -- "Instruction" --> CU
+    UMEM -- "Instruction" --> CU
+    IMEM -- "Instruction" --> IMM
+    UMEM -- "Instruction" --> IMM
     IMEM -- "rs1, rs2, rd" --> RF
+    UMEM -- "rs1, rs2, rd" --> RF
 
     %% Decode & Control
     CU -- "ALU Op Type" --> ALU_CTRL
@@ -52,10 +65,13 @@ graph TD
     RF -- "rs2_val (Store Data)" --> BRIDGE
     
     BRIDGE -- "Address, Data, WE" --> DMEM
+    BRIDGE -- "Address, Data, WE (Port B)" --> UMEM
     BRIDGE -- "Address, Data, WE" --> HEX
     BRIDGE -- "Address, Data, WE" --> LEDS
+    BRIDGE -- "Address, Data, WE" --> VGA
     
     DMEM -- "Read Data" --> RF
+    UMEM -- "Read Data (Port B)" --> RF
     BRIDGE -- "Rerouted Read Data" --> RF
     ALU -- "ALU Result (Bypass)" --> RF
 
@@ -67,6 +83,8 @@ graph TD
     PC -- "PC Snapshot" --> HIST
     RF -- "1024-bit Reg Snapshot" --> HIST
     DMEM -- "1024-bit Mem Snapshot" --> HIST
+    UMEM -- "1024-bit Mem Snapshot" --> HIST
     HIST -. "Restore PC" .-> PC
     HIST -. "Restore Regs" .-> RF
     HIST -. "Restore Mem" .-> DMEM
+    HIST -. "Restore Mem" .-> UMEM

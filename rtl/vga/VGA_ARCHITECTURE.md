@@ -1,20 +1,32 @@
-# RV32I VGA Subsystem (`rtl/vga/`)
+# VGA Subsystem (`rtl/vga/`)
 
-This directory contains the hardware logic required to drive an external monitor via the DE1-SoC's VGA DAC. It provides a real-time, retro Pip-Boy style visualization of the entire internal state of the processor.
+This directory contains the logic for real-time visual debugging of the RISC-V processor on a standard VGA monitor.
 
-## Files & Responsibilities
+## Components
 
 ### `vga_controller.v`
-The Sync and Timing Generator.
-- **What it does:** Using a 25MHz clock, this module mathematically calculates the exact pixel coordinates (`x`, `y`) currently being drawn by the monitor's electron beam. It generates the industry-standard 640x480 @ 60Hz timing signals, including the Horizontal Sync (`VGA_HS`), Vertical Sync (`VGA_VS`), and Blanking intervals. 
-- **Connections:** It interfaces directly with the physical VGA pins on the FPGA and outputs the `x` and `y` coordinates to the `text_engine.v` so it knows which pixel to color.
+The timing engine for the VGA signal.
+- **Resolution**: 640x480 @ 60Hz.
+- **Function**: Generates the `H-Sync`, `V-Sync`, and `video_on` signals. It provides the current `pixel_x` and `pixel_y` coordinates to the text engine.
 
 ### `font_rom.v`
-The Visual Character Dictionary.
-- **What it does:** A Read-Only Memory containing the pixel bitmasks for the ASCII character set. Every character is 8 pixels wide and 16 pixels tall. When given an ASCII code and a specific Y-row, it outputs an 8-bit row of pixels that represent that slice of the letter.
-- **Connections:** It is instantiated exclusively by the `text_engine.v`.
+A 2KB ROM containing an 8x16 bitmapped font.
+- **Function**: Given an ASCII character code and a scanline (0-15), it returns the 8-bit pattern of pixels for that row of the character.
 
 ### `text_engine.v`
-The Pip-Boy Graphics Renderer.
-- **What it does:** This is the core visualization logic. It takes the current `x` and `y` pixel coordinates from the `vga_controller` and determines which character should be drawn at that exact spot on an 80x30 character grid. It actively monitors the `state_out` buses of the Register File, Program Counter, ALU, and Control Unit. By converting those 32-bit hex values into ASCII characters on the fly, it renders the entire CPU state to the screen in a retro green (`#39FF14`) color palette.
-- **Connections:** It reads data from almost every major module in the top-level design, queries the `font_rom.v` for character pixels, and outputs the final RGB color values back to the `vga_controller.v` interface.
+The character renderer and dashboard.
+- **Function**: It receives the entire CPU state (PC, Instructions, Registers, ALU result) and maps it to specific grid locations on the screen.
+- **Layout**:
+    - **Line 1-4**: General CPU status (PC, Instruction Hex).
+    - **Line 6-10**: Specific ALU/Branch monitoring (RS1, RS2, ALU Result).
+    - **Right Side**: Full Register File dump (x0 - x31).
+- **Features**:
+    - Displays `OFF` when signals (like RS1/RS2) are invalid for the current instruction.
+    - Highlights `TRAP` states when a syscall or error occurs.
+
+## Connections
+
+The VGA subsystem is clocked at 25 MHz (divided from the 50 MHz FPGA clock). It connects directly to the top-level monitor buses from the `rv32i_core.v`.
+
+## Usage in Revisions
+This subsystem is included in both the **Harvard** and **Von Neumann** revisions.
