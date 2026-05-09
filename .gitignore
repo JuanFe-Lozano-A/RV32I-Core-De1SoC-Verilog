@@ -8,6 +8,7 @@ simulation/
 *.bak
 c5_pin_model_dump.txt
 greybox_tmp/
+.qsys_edit/
 
 # Icarus Verilog / ModelSim Simulation Artifacts
 *.vcd
