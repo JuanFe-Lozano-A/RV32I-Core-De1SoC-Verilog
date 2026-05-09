@@ -1,0 +1,13 @@
+// data_write.hex
+// Assembly:
+// 0x00: li x1, 123        (x1 = 123)
+// 0x04: sw x1, 128(x0)    (mem[128] = 123) - Writes to Data Section (index 32)
+// 0x08: lw x2, 128(x0)    (x2 = 123)
+// 0x0C: jal x0, 0         (halt)
+// 0x80: 00000000          (Target variable at index 32)
+07B00093
+08102023
+08002103
+0000006F
+@20
+00000000

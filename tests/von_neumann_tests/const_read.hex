@@ -1,0 +1,12 @@
+// const_read.hex
+// Assembly:
+// 0x00: auipc x1, 0      (x1 = 0)
+// 0x04: lw x2, 12(x1)    (x2 = mem[16] = 0xDEADBEEF)
+// 0x08: jal x0, 0        (halt)
+// 0x0C: 00000000         (padding)
+// 0x10: DEADBEEF         (constant in code)
+00000097
+00C0A103
+0000006F
+00000000
+DEADBEEF
