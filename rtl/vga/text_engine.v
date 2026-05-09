@@ -14,6 +14,9 @@ module text_engine (
     input  wire [31:0]   monitor_rd1,
     input  wire [31:0]   monitor_rd2,
     input  wire [31:0]   monitor_result,
+    input  wire          monitor_rs1_valid,
+    input  wire          monitor_rs2_valid,
+    input  wire          monitor_result_valid,
     input  wire          trap_active,
     input  wire [3:0]    mcause,
     input  wire          is_first_inst,
@@ -207,34 +210,116 @@ module text_engine (
             end
         end
         else if (char_y == 6) begin
-            // ALU Result: xxxxxxxx
-            if (char_x >= 5 && char_x < 17) begin
+            // ALU Res: xxxxxxxx    RS1: xxxxxxxx    RS2: xxxxxxxx
+            if (char_x >= 5 && char_x < 14) begin
                 case(char_x - 5)
-                    0: char_code = 7'h41;
-                    1: char_code = 7'h4C;
-                    2: char_code = 7'h55;
-                    3: char_code = 7'h20;
-                    4: char_code = 7'h52;
-                    5: char_code = 7'h65;
-                    6: char_code = 7'h73;
-                    7: char_code = 7'h75;
-                    8: char_code = 7'h6C;
-                    9: char_code = 7'h74;
-                    10: char_code = 7'h3A;
-                    11: char_code = 7'h20;
+                    0: char_code = 7'h41; // A
+                    1: char_code = 7'h4C; // L
+                    2: char_code = 7'h55; // U
+                    3: char_code = 7'h20; //  
+                    4: char_code = 7'h52; // R
+                    5: char_code = 7'h65; // e
+                    6: char_code = 7'h73; // s
+                    7: char_code = 7'h3A; // :
+                    8: char_code = 7'h20; //  
                 endcase
             end
-            else if (char_x >= 17 && char_x < 25) begin
-                case(char_x - 17)
-                    0: char_code = hex2ascii(monitor_result[31:28]);
-                    1: char_code = hex2ascii(monitor_result[27:24]);
-                    2: char_code = hex2ascii(monitor_result[23:20]);
-                    3: char_code = hex2ascii(monitor_result[19:16]);
-                    4: char_code = hex2ascii(monitor_result[15:12]);
-                    5: char_code = hex2ascii(monitor_result[11:8]);
-                    6: char_code = hex2ascii(monitor_result[7:4]);
-                    7: char_code = hex2ascii(monitor_result[3:0]);
+            else if (char_x >= 14 && char_x < 22) begin
+                if (monitor_result_valid) begin
+                    case(char_x - 14)
+                        0: char_code = hex2ascii(monitor_result[31:28]);
+                        1: char_code = hex2ascii(monitor_result[27:24]);
+                        2: char_code = hex2ascii(monitor_result[23:20]);
+                        3: char_code = hex2ascii(monitor_result[19:16]);
+                        4: char_code = hex2ascii(monitor_result[15:12]);
+                        5: char_code = hex2ascii(monitor_result[11:8]);
+                        6: char_code = hex2ascii(monitor_result[7:4]);
+                        7: char_code = hex2ascii(monitor_result[3:0]);
+                    endcase
+                end else begin
+                    case(char_x - 14)
+                        0: char_code = 7'h20; //  
+                        1: char_code = 7'h20; //  
+                        2: char_code = 7'h4F; // O
+                        3: char_code = 7'h46; // F
+                        4: char_code = 7'h46; // F
+                        5: char_code = 7'h20; //  
+                        6: char_code = 7'h20; //  
+                        7: char_code = 7'h20; //  
+                    endcase
+                end
+            end
+            
+            // RS1: xxxxxxxx
+            else if (char_x >= 26 && char_x < 31) begin
+                case(char_x - 26)
+                    0: char_code = 7'h52; // R
+                    1: char_code = 7'h53; // S
+                    2: char_code = 7'h31; // 1
+                    3: char_code = 7'h3A; // :
+                    4: char_code = 7'h20; //  
                 endcase
+            end
+            else if (char_x >= 31 && char_x < 39) begin
+                if (monitor_rs1_valid) begin
+                    case(char_x - 31)
+                        0: char_code = hex2ascii(monitor_rd1[31:28]);
+                        1: char_code = hex2ascii(monitor_rd1[27:24]);
+                        2: char_code = hex2ascii(monitor_rd1[23:20]);
+                        3: char_code = hex2ascii(monitor_rd1[19:16]);
+                        4: char_code = hex2ascii(monitor_rd1[15:12]);
+                        5: char_code = hex2ascii(monitor_rd1[11:8]);
+                        6: char_code = hex2ascii(monitor_rd1[7:4]);
+                        7: char_code = hex2ascii(monitor_rd1[3:0]);
+                    endcase
+                end else begin
+                    case(char_x - 31)
+                        0: char_code = 7'h20; //  
+                        1: char_code = 7'h20; //  
+                        2: char_code = 7'h4F; // O
+                        3: char_code = 7'h46; // F
+                        4: char_code = 7'h46; // F
+                        5: char_code = 7'h20; //  
+                        6: char_code = 7'h20; //  
+                        7: char_code = 7'h20; //  
+                    endcase
+                end
+            end
+
+            // RS2: xxxxxxxx
+            else if (char_x >= 43 && char_x < 48) begin
+                case(char_x - 43)
+                    0: char_code = 7'h52; // R
+                    1: char_code = 7'h53; // S
+                    2: char_code = 7'h32; // 2
+                    3: char_code = 7'h3A; // :
+                    4: char_code = 7'h20; //  
+                endcase
+            end
+            else if (char_x >= 48 && char_x < 56) begin
+                if (monitor_rs2_valid) begin
+                    case(char_x - 48)
+                        0: char_code = hex2ascii(monitor_rd2[31:28]);
+                        1: char_code = hex2ascii(monitor_rd2[27:24]);
+                        2: char_code = hex2ascii(monitor_rd2[23:20]);
+                        3: char_code = hex2ascii(monitor_rd2[19:16]);
+                        4: char_code = hex2ascii(monitor_rd2[15:12]);
+                        5: char_code = hex2ascii(monitor_rd2[11:8]);
+                        6: char_code = hex2ascii(monitor_rd2[7:4]);
+                        7: char_code = hex2ascii(monitor_rd2[3:0]);
+                    endcase
+                end else begin
+                    case(char_x - 48)
+                        0: char_code = 7'h20; //  
+                        1: char_code = 7'h20; //  
+                        2: char_code = 7'h4F; // O
+                        3: char_code = 7'h46; // F
+                        4: char_code = 7'h46; // F
+                        5: char_code = 7'h20; //  
+                        6: char_code = 7'h20; //  
+                        7: char_code = 7'h20; //  
+                    endcase
+                end
             end
         end
         else if (char_y == 9) begin
