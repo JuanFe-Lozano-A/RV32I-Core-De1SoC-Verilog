@@ -6,7 +6,7 @@
 // 0x0C: 00000000         (padding)
 // 0x10: DEADBEEF         (constant in code)
 00000097
-00C0A103
+0100A103
 0000006F
 00000000
 DEADBEEF

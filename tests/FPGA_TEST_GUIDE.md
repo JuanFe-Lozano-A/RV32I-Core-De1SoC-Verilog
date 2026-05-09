@@ -95,12 +95,12 @@ The viewer will automatically render the 80x30 retro-green character grid, showi
 
 These tests verify the Unified Memory architecture where code and data share the same physical RAM block.
 
-| Test Name | Description |
-|-----------|-------------|
-| `const_read` | Reads a 32-bit constant (`0xDEADBEEF`) embedded directly in the instruction space. |
-| `data_write` | Stores a value to the "data" section of the unified memory and verifies it can be read back. |
-| `trap_corruption` | **(Edge Case)** Attempts to overwrite the Trap Handler at `0xFC`. Proves instructions are now writable. |
-| `fibonacci_ram` | **(Complex)** Calculates Fibonacci numbers and saves the sequence as a list in RAM. |
+| Test Name | Description | Trace (.csv) |
+|-----------|-------------|:------------:|
+| `const_read` | Reads a 32-bit constant (`0xDEADBEEF`) from code. | ✅ |
+| `data_write` | Stores a value to the unified RAM section. | ✅ |
+| `trap_corruption` | Attempts to overwrite the Trap Handler code. | ✅ |
+| `fibonacci_ram` | Calculates Fibonacci and saves results in RAM. | ✅ |
 
 ### How to test Von Neumann Mode:
 1. Ensure you have the **`FPGA-RiscV32I_VGA_VN`** revision selected in Quartus.
