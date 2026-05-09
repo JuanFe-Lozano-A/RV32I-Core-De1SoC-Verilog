@@ -88,3 +88,21 @@ To make reviewing the CSV execution traces incredibly simple, this repository in
 - ⬅️ **Left Arrow Key**: Step Backward to the previous instruction.
 
 The viewer will automatically render the 80x30 retro-green character grid, showing the Program Counter, the current instruction (both Hex and Assembly), the ALU Result, and the exact state of all 32 hardware registers at that specific moment in time!
+
+---
+
+## 🏗️ Von Neumann Tests (`tests/von_neumann_tests/`)
+
+These tests verify the Unified Memory architecture where code and data share the same physical RAM block.
+
+| Test Name | Description |
+|-----------|-------------|
+| `const_read` | Reads a 32-bit constant (`0xDEADBEEF`) embedded directly in the instruction space. |
+| `data_write` | Stores a value to the "data" section of the unified memory and verifies it can be read back. |
+| `trap_corruption` | **(Edge Case)** Attempts to overwrite the Trap Handler at `0xFC`. Proves instructions are now writable. |
+| `fibonacci_ram` | **(Complex)** Calculates Fibonacci numbers and saves the sequence as a list in RAM. |
+
+### How to test Von Neumann Mode:
+1. Ensure you have the **`FPGA-RiscV32I_VGA_VN`** revision selected in Quartus.
+2. Replace `program.hex` with any of the files from this directory.
+3. Recompile and deploy.
