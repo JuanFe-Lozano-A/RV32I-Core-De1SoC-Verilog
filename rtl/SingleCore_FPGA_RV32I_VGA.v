@@ -36,7 +36,7 @@ module SingleCore_FPGA_RV32I_VGA (
     // 2. Clock, Reset & Step Logic
     // ==========================================
     wire RESET_N = KEY[0];
-
+    
     reg key1_d1, key1_d2;
     reg key2_d1, key2_d2;
     always @(posedge FPGA_CLK or negedge RESET_N) begin
