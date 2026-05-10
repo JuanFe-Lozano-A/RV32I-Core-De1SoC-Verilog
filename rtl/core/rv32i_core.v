@@ -202,9 +202,9 @@ module rv32i_core (
     always @(*) begin
         if (effective_MemWrite || MemRead) begin
             case (funct3[1:0])
-                2'b00: dmem_be = 4'b0001 << alu_result[1:0]; // Byte
-                2'b01: dmem_be = 4'b0011 << alu_result[1:0]; // Halfword
-                2'b10: dmem_be = 4'b1111;                    // Word
+                2'b00: dmem_be = 4'b0001 << alu_result[1:0]; // Byte (any of 4 bytes)
+                2'b01: dmem_be = (alu_result[1]) ? 4'b1100 : 4'b0011; // Halfword (lower or upper 16-bits)
+                2'b10: dmem_be = 4'b1111;                    // Word (all 4 bytes)
                 default: dmem_be = 4'b1111;
             endcase
         end else begin
