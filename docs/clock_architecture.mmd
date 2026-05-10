@@ -1,0 +1,25 @@
+graph TD
+    %% Physical Inputs
+    OSC["FPGA_CLK (50 MHz Osc)"]
+
+    subgraph "System Core Domain (50 MHz)"
+        OSC --> CORE["RV32I Core Logic"]
+        OSC --> UNIMEM["Unified Memory (Port B)"]
+        OSC --> HIST["History Buffer"]
+        OSC --> REGS["Register File"]
+    end
+
+    subgraph "Video Subsystem Domain (25 MHz)"
+        OSC --> DIV["Clock Divider (/2 Reg)"]
+        DIV --> CLK25["clk_25mhz"]
+        CLK25 --> VCTRL["VGA Controller"]
+        CLK25 --> TENG["Text Engine"]
+        
+        %% External Signal
+        CLK25 -- "NOT Gate (~)" --> VGA_EXT["VGA_CLK (External Pin)"]
+    end
+
+    %% Aesthetics
+    style OSC fill:#f96,stroke:#333,stroke-width:4px
+    style CLK25 fill:#39f,stroke:#333,stroke-width:4px
+    style VGA_EXT fill:#0c0,stroke:#333,stroke-width:4px

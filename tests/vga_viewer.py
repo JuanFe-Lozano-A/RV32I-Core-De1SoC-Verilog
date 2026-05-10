@@ -21,8 +21,10 @@ class RV32IManager(tk.Tk):
         self.show_menu()
 
     def show_menu(self):
-        if "menu" in self.frames:
-            self.frames["menu"].destroy()
+        # Clear ALL existing frames to prevent stacking
+        for frame in self.frames.values():
+            frame.destroy()
+        self.frames.clear()
         
         frame = SelectionMenu(parent=self.container, controller=self)
         self.frames["menu"] = frame
@@ -38,9 +40,10 @@ class RV32IManager(tk.Tk):
                 messagebox.showerror("Error", "CSV file is empty or invalid.")
                 return
 
-            # Clear current frames
-            for f in self.frames.values():
-                f.pack_forget()
+            # Clear ALL existing frames before opening viewer
+            for frame in self.frames.values():
+                frame.destroy()
+            self.frames.clear()
 
             viewer = VGAPipBoyViewer(parent=self.container, controller=self, csv_data=data[1:])
             self.frames["viewer"] = viewer
@@ -62,23 +65,58 @@ class SelectionMenu(tk.Frame):
         style = ttk.Style()
         style.theme_use("clam")
         style.configure("Treeview", 
+                        background="#001100", 
+                        foreground="#39ff14", 
+                        fieldbackground="#001100", 
+                        font=("Consolas", 10),
+                        borderwidth=1,
+                        relief="flat")
+        style.configure("Treeview.Heading", 
                         background="#002200", 
                         foreground="#39ff14", 
-                        fieldbackground="#002200", 
-                        font=("Consolas", 10))
-        style.map("Treeview", background=[('selected', '#004400')])
+                        font=("Consolas", 11, "bold"),
+                        relief="flat")
+        style.map("Treeview.Heading",
+                  background=[('active', '#004400')],
+                  foreground=[('active', '#39ff14')])
         
-        # Title
-        tk.Label(self, text="RV32I TEST MANAGER", bg="#001100", fg="#39ff14", 
-                 font=("Consolas", 24, "bold")).pack(pady=20)
+        style.map("Treeview", 
+                  background=[('selected', '#004400')],
+                  foreground=[('selected', '#39ff14')])
+        
+        # Remove the dotted focus line
+        style.layout("Treeview", [('Treeview.treearea', {'sticky': 'nswe'})])
+        
+        # Scrollbar Styling
+        style.configure("Vertical.TScrollbar", 
+                        gripcount=0,
+                        background="#001100", 
+                        darkcolor="#001100", 
+                        lightcolor="#001100",
+                        troughcolor="#001100", 
+                        bordercolor="#39ff14", 
+                        arrowcolor="#39ff14")
+        style.map("Vertical.TScrollbar",
+                  background=[('pressed', '#39ff14'), ('active', '#004400')],
+                  arrowcolor=[('pressed', '#001100'), ('active', '#39ff14')])
+        
+        # Retro ASCII Title
+        tk.Label(self, text="""
+  _ RV32I SYSTEM MANAGER _
+ |________________________|
+        """, bg="#001100", fg="#39ff14", 
+                 font=("Consolas", 18, "bold")).pack(pady=(20, 0))
+        
+        tk.Label(self, text="--- SELECT TEST OR DEPLOY HEX ---", 
+                 bg="#001100", fg="#39ff14", font=("Consolas", 10)).pack(pady=(0, 20))
         
         # Main Layout
-        content_frame = tk.Frame(self, bg="#001100")
-        content_frame.pack(fill="both", expand=True, padx=40)
+        content_frame = tk.Frame(self, bg="#001100", highlightbackground="#39ff14", highlightthickness=1)
+        content_frame.pack(fill="both", expand=True, padx=40, pady=20)
         
         # Treeview (Left Side)
         tree_frame = tk.Frame(content_frame, bg="#001100")
-        tree_frame.pack(side="left", fill="both", expand=True)
+        tree_frame.pack(side="left", fill="both", expand=True, padx=10, pady=10)
         
         self.tree = ttk.Treeview(tree_frame, selectmode="browse")
         self.tree.pack(side="left", fill="both", expand=True)
@@ -87,7 +125,7 @@ class SelectionMenu(tk.Frame):
         scrollbar.pack(side="right", fill="y")
         self.tree.configure(yscrollcommand=scrollbar.set)
         
-        self.tree.heading("#0", text="Tests Directory", anchor="w")
+        self.tree.heading("#0", text="FILE SYSTEM / TESTS", anchor="w")
         
         # Populate Tree
         self.populate_tree()
@@ -95,25 +133,29 @@ class SelectionMenu(tk.Frame):
         
         # Buttons (Right Side)
         btn_frame = tk.Frame(content_frame, bg="#001100")
-        btn_frame.pack(side="right", fill="y", padx=(20, 0))
+        btn_frame.pack(side="right", fill="y", padx=20, pady=20)
         
-        self.deploy_btn = tk.Button(btn_frame, text="🚀 DEPLOY TO FPGA", command=self.deploy_hex,
-                                   bg="#004400", fg="#39ff14", font=("Consolas", 12, "bold"),
-                                   state="disabled", width=25, height=2)
+        def create_retro_btn(parent, text, cmd, state="normal"):
+            return tk.Button(parent, text=text, command=cmd, state=state,
+                             bg="#001100", fg="#39ff14", 
+                             activebackground="#39ff14", activeforeground="#001100",
+                             disabledforeground="#002200",
+                             font=("Consolas", 11, "bold"),
+                             relief="flat", bd=1, highlightthickness=1,
+                             highlightbackground="#39ff14",
+                             width=25, height=2)
+
+        self.deploy_btn = create_retro_btn(btn_frame, "[ DEPLOY TO FPGA ]", self.deploy_hex, state="disabled")
         self.deploy_btn.pack(pady=10)
         
-        self.view_btn = tk.Button(btn_frame, text="👁️ VIEW TRACE (CSV)", command=self.view_csv,
-                                 bg="#004400", fg="#39ff14", font=("Consolas", 12, "bold"),
-                                 state="disabled", width=25, height=2)
+        self.view_btn = create_retro_btn(btn_frame, "[ VIEW TRACE (CSV) ]", self.view_csv, state="disabled")
         self.view_btn.pack(pady=10)
         
-        tk.Button(btn_frame, text="🗺️ SHOW ARCHITECTURE", command=self.show_arch,
-                  bg="#002244", fg="#39ff14", font=("Consolas", 12, "bold"),
-                  width=25, height=2).pack(pady=10)
+        self.arch_btn = create_retro_btn(btn_frame, "[ HARDWARE ARCH ]", self.show_arch)
+        self.arch_btn.pack(pady=10)
         
-        tk.Button(btn_frame, text="🚪 EXIT", command=sys.exit,
-                  bg="#440000", fg="#39ff14", font=("Consolas", 12, "bold"),
-                  width=25, height=2).pack(pady=10)
+        self.exit_btn = create_retro_btn(btn_frame, "[ TERMINATE ]", sys.exit)
+        self.exit_btn.pack(pady=10)
 
     def populate_tree(self):
         # Start scanning from the script's directory
@@ -200,31 +242,39 @@ class VGAPipBoyViewer(tk.Frame):
             height=30, 
             bg="#002200", 
             fg="#39ff14", 
-            font=("Consolas", 14, "bold"),
+            font=("Consolas", 12, "bold"), # Reduced font slightly
             state="disabled",
             relief="flat",
             padx=10,
-            pady=10
+            pady=5
         )
-        self.text_area.pack(pady=20)
+        self.text_area.pack(pady=10)
         
-        # Control Label
-        tk.Label(
-            self, 
-            text="< LEFT ARROW : Backward | RIGHT ARROW : Forward >", 
-            bg="#001100", 
-            fg="#39ff14", 
-            font=("Consolas", 12, "bold")
-        ).pack()
+        # Controls Frame (Horizontal)
+        controls_frame = tk.Frame(self, bg="#001100")
+        controls_frame.pack(fill="x", padx=40)
 
         # Back Button
         tk.Button(
             self, 
-            text="🔙 BACK TO MENU", 
+            text="[ BACK TO MENU ]", 
             command=self.controller.show_menu,
-            bg="#444400", fg="#39ff14", font=("Consolas", 12, "bold"),
+            bg="#001100", fg="#39ff14", 
+            activebackground="#39ff14", activeforeground="#001100",
+            font=("Consolas", 10, "bold"),
+            relief="flat", bd=1, highlightthickness=1,
+            highlightbackground="#39ff14",
             width=20
-        ).pack(pady=20)
+        ).pack(pady=10)
+
+        # Control Label (Center/Right)
+        tk.Label(
+            controls_frame, 
+            text="< LEFT : Backward | RIGHT : Forward >", 
+            bg="#001100", 
+            fg="#39ff14", 
+            font=("Consolas", 10, "bold")
+        ).pack(side="right", pady=10)
 
         # Bind Keys (must focus the frame)
         self.bind_all("<Right>", self.step_forward)

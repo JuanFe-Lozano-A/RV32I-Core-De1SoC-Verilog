@@ -19,15 +19,15 @@
 #
 # Quartus Prime
 # Version 25.1std.0 Build 1129 10/21/2025 SC Lite Edition
-# Date created = 17:09:19  May 09, 2026
+# Date created = 19:13:24  May 09, 2026
 #
 # -------------------------------------------------------------------------- #
 
 QUARTUS_VERSION = "25.1"
-DATE = "17:09:19  May 09, 2026"
+DATE = "19:13:24  May 09, 2026"
 
 # Revisions
 
-PROJECT_REVISION = "FPGA-RiscV32I_VGA_VN"
 PROJECT_REVISION = "FPGA-RiscV32I_VGA"
+PROJECT_REVISION = "FPGA-RiscV32I_VGA_VN"
 PROJECT_REVISION = "FPGA-RiscV32I"
