@@ -1,13 +1,12 @@
-// trap_corruption.hex
-// This test demonstrates that the program can modify its own Trap Handler.
-// 0x00: li x1, 0x00000013  (NOP instruction)
-// 0x04: sw x1, 252(x0)     (Overwrite address 0xFC / Index 63)
-// 0x08: ecall              (Trigger Trap - should now hit a NOP instead of a HALT)
-// 0x0C: jal x0, 0          (Original Halt)
-// 0xFC: 0000006F           (Default Trap Handler: JAL x0, 0)
-01300093
-0E102623
-00000073
-0000006F
-@3F
+12345537
+67850513
+08000293
+00A2A023
+00029083
+0000B5B7
+BCD58593
+00B29123
+0002A103
+00229183
+0022D203
 0000006F
