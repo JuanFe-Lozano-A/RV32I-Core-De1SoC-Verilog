@@ -1,7 +1,7 @@
 `timescale 1ns / 1ps
 
 module history_buffer #(
-    parameter DEPTH = 64
+    parameter DEPTH = 256
 )(
     input wire clk,
     input wire reset_n,

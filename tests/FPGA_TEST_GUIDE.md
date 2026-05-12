@@ -88,3 +88,30 @@ To make reviewing the CSV execution traces incredibly simple, this repository in
 - ⬅️ **Left Arrow Key**: Step Backward to the previous instruction.
 
 The viewer will automatically render the 80x30 retro-green character grid, showing the Program Counter, the current instruction (both Hex and Assembly), the ALU Result, and the exact state of all 32 hardware registers at that specific moment in time!
+
+---
+
+## 🏗️ Von Neumann Tests (`tests/von_neumann_tests/`)
+
+These tests verify the Unified Memory architecture where code and data share the same physical RAM block.
+
+| Test Name | Description | Trace (.csv) |
+|-----------|-------------|:------------:|
+| `const_read` | Reads a 32-bit constant (`0xDEADBEEF`) from code. | ✅ |
+| `data_write` | Stores a value to the unified RAM section. | ✅ |
+| `trap_corruption` | Attempts to overwrite the Trap Handler code. | ✅ |
+| `fibonacci.hex` | Calculates 10 numbers of Fibonacci sequence. | `x2`, `x3` values. |
+| `halfword_test` | Tests 16-bit memory access (LH, LHU, SH). | `x3` (Sign ext), `x4` (Zero ext). |
+
+### Half-word Test Details (`halfword_test`)
+This test verifies the processor's ability to handle 16-bit data types, which is essential for working with short integers and audio/sensor data.
+
+**Key Verification Points:**
+1.  **Store Half (`sh`)**: Verifies that writing 16 bits to memory (e.g., at offset 2) doesn't corrupt the lower 16 bits of the same 32-bit word.
+2.  **Load Half (`lh`)**: Tests sign extension. If the 16-bit value is negative (MSB=1), the register should be filled with `F`s (e.g., `0xABCD` -> `0xFFFFABCD`).
+3.  **Load Half Unsigned (`lhu`)**: Tests zero extension. The same value `0xABCD` should result in `0x0000ABCD`.
+
+### How to test Von Neumann Mode:
+1. Ensure you have the **`FPGA-RiscV32I_VGA_VN`** revision selected in Quartus.
+2. Replace `program.hex` with any of the files from this directory.
+3. Recompile and deploy.

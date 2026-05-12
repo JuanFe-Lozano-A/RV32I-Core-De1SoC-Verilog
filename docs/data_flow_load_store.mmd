@@ -1,0 +1,25 @@
+graph LR
+    subgraph CPU ["RV32I CPU CORE"]
+        REGS["Register File (x1-x31)<br/>Fast local storage"]
+        ALU["ALU (Address Calc)<br/>Calculates: Base + Offset"]
+    end
+
+    subgraph MEM ["MEMORY SYSTEM"]
+        BRIDGE["Address Bridge<br/>Routes to RAM or I/O"]
+        RAM["RAM / Unified Memory<br/>Bulk data storage"]
+    end
+
+    %% STORE Process
+    REGS -- "1. Data Out (rs2)" --> BRIDGE
+    ALU -- "2. Target Address" --> BRIDGE
+    BRIDGE -- "3. Store (sw/sb)" --> RAM
+    
+    %% LOAD Process
+    RAM -- "4. Data In (lw/lb)" --> BRIDGE
+    BRIDGE -- "5. Writeback" --> REGS
+
+    %% Styling
+    style REGS fill:#39f,stroke:#333,stroke-width:4px
+    style RAM fill:#f96,stroke:#333,stroke-width:4px
+    style ALU fill:#dfd,stroke:#333
+    style BRIDGE fill:#eee,stroke:#333,stroke-dasharray: 5 5

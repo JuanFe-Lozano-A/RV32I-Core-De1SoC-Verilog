@@ -23,3 +23,26 @@ The Hardware Undo Engine.
 The Memory-Mapped I/O Router.
 - **What it does:** Because the FPGA has limited RAM, we map physical addresses to different locations. If the CPU tries to write to address `0x00`, it goes to RAM. If it tries to write to address `0x2000`, the bridge reroutes the data to an external output (like LED displays). It intercepts all memory requests from the core and routes them to the correct hardware.
 - **Connections:** Sits directly between the `rv32i_core.v` output ports and the physical `data_memory.v` or external FPGA I/O pins.
+
+## Dual-Architecture Modes
+
+This project supports two different memory architectures that can be switched via **Quartus Revisions**:
+
+### 1. Harvard Architecture (Default)
+- **Files:** `instruction_memory.v`, `data_memory.v`.
+- **Logic:** Code and Data are physically separate. The Data Memory starts empty.
+- **Quartus Revision:** `FPGA-RiscV32I_VGA`.
+- **Best for:** Strict security and high-speed execution where code is immutable.
+
+### 2. Von Neumann Architecture (Unified)
+- **Files:** `unified_memory.v`.
+- **Logic:** Code and Data share the same 256-byte memory. This allows using `.data` sections in assembly and reading constants directly from the binary.
+- **Implementation:** Uses a **Dual-Port RAM** to allow simultaneous Instruction Fetch and Data Access in a single cycle.
+- **Quartus Revision:** `FPGA-RiscV32I_VGA_VN`.
+- **Switch:** This mode is activated by the Verilog macro `` `USE_VON_NEUMANN ``.
+
+### How to Switch Revisions in Quartus:
+1. Open the project in Quartus Prime.
+2. Go to **Project** -> **Revisions...**
+3. Select the desired revision and click **Set Current**.
+4. Re-compile the project.

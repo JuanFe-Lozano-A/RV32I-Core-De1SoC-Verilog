@@ -1,0 +1,27 @@
+// fibonacci_ram.hex
+// Calculates 10 Fibonacci numbers and stores them in the data section (RAM).
+// 0x00: li x1, 10        (Counter)
+// 0x04: li x2, 0         (a)
+// 0x08: li x3, 1         (b)
+// 0x0C: li x5, 128       (RAM Start / Index 32)
+// loop:
+// 0x10: sw x2, 0(x5)     (Store result)
+// 0x14: add x4, x2, x3   (temp = a + b)
+// 0x18: addi x2, x3, 0   (a = b)
+// 0x1C: addi x3, x4, 0   (b = temp)
+// 0x20: addi x5, x5, 4   (ptr++)
+// 0x24: addi x1, x1, -1  (counter--)
+// 0x28: bne x1, x0, -24  (Loop to 0x10)
+// 0x2C: jal x0, 0        (Halt)
+00A00093
+00000113
+00100193
+08000293
+0022A023
+00310233
+00018113
+00020193
+00428293
+FFF08093
+FE0094E3
+0000006F

@@ -23,3 +23,10 @@ The 32x32-bit General Purpose Register array.
 The central decoder and traffic cop.
 - **What it does:** It takes the 32-bit instruction word from `instruction_memory.v` and combinatorially slices it into opcodes (`inst[6:0]`), `funct3`, and `funct7`. Based on these bits, it generates all the control signals (`reg_write`, `alu_src`, `mem_write`, `branch_type`, etc.) that tell the datapath what to do.
 - **Connections:** Feeds massive amounts of control wires into `alu_control.v`, `register_file.v`, and the top-level memory bridges. It also generates the `illegal_inst` exception flag if it sees an unknown opcode.
+
+## Multi-Architecture Compatibility
+
+The `rv32i_core.v` is designed to be **memory-architecture agnostic**. It provides separate ports for instruction fetching and data access. 
+- In **Harvard Mode**, these ports are connected to two physical memories.
+- In **Von Neumann Mode**, these ports are connected to a single Dual-Port RAM.
+The core logic does not change between modes, ensuring consistent instruction execution regardless of the memory layout.
